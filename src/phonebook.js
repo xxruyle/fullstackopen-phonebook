@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import phoneNumbers from './services/phoneNumbers'
 
-
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
@@ -42,24 +41,52 @@ const App = () => {
         id: persons.length, 
     }
 
-    phoneNumbers
-        .addPerson(personObject).then(returnedPerson => 
-        {
-            setPersons(persons.concat(returnedPerson))
-            setNewName('')
-            setNewNumber('')
-        })
+    const currentNames = persons.map(p => p.name)
+
+    if (currentNames.includes(newName)) {
+        updatePerson(personObject)
+        setNewName('')
+        setNewNumber('')
+    } else {
+        phoneNumbers
+            .addPerson(personObject).then(returnedPerson => 
+            {
+                setPersons(persons.concat(returnedPerson))
+                setNewName('')
+                setNewNumber('')
+            })
+    }
   }
+
+  const updatePerson = (personObject) => {
+    const currentPerson = persons.find(p => p.name === personObject.name)
+    const updatedObject = {
+        name: personObject.name, 
+        number: personObject.number, 
+        id: currentPerson.id 
+    }
+
+    phoneNumbers.update(updatedObject.id, updatedObject).then(returnedPerson => setPersons(persons.map(person => person.id !== updatedObject.id ? person : returnedPerson)))
+  }
+
+  const removePerson = (personId) =>  {
+    phoneNumbers
+        .deletePerson(personId).then(persons => {
+            setPersons(persons.filter(p => p.id !== personId))
+        })
+
+  }
+
 
   // Filtering search
   let filteredObjects = []
   for (const [key, value] of Object.entries(persons)) {
     if (value.name.toLowerCase().includes(peopleToShow.toLowerCase()) && !(value.name in filteredObjects)) {
         filteredObjects.push(value.id)
+        console.log(filteredObjects)
     }
   }
 
-  console.log(filteredObjects)
   
   return (
     <div>
@@ -82,8 +109,8 @@ const App = () => {
       </form>
       <h2>Numbers</h2>
         <ul>
-            {peopleToShow === '' ? persons.map(person =>  <li key={person.id}>{person.name}: {person.number}</li>) : 
-            filteredObjects.map(filtered => <li key={filtered}>{persons[filtered].name}: {persons[filtered].number}</li>)}  
+            {peopleToShow === '' ? persons.map(person =>  <li key={person.id}>{person.name}: {person.number}<button onClick={() => removePerson(person.id)}>Delete</button></li>) : 
+            filteredObjects.map(filtered => <li key={filtered}>{persons[filtered].name}: {persons[filtered].number}<button onClick={() => removePerson(persons[filtered].id)}>Delete</button></li>)}  
         </ul>
     </div>
   )
